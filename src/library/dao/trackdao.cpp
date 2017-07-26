@@ -1569,7 +1569,8 @@ bool TrackDAO::updateTrack(Track* pTrack) {
             "coverart_source=:coverart_source,"
             "coverart_type=:coverart_type,"
             "coverart_location=:coverart_location,"
-            "coverart_hash=:coverart_hash"
+            "coverart_hash=:coverart_hash,"
+            "datetime_changed=datetime()"
             " WHERE id=:track_id");
 
     query.bindValue(":track_id", trackId.toVariant());
