@@ -275,7 +275,6 @@ void WMainMenuBar::initialize() {
     createVisibilityControl(pViewMaximizeLibrary, ConfigKey("[Master]", "maximize_library"));
     pViewMenu->addAction(pViewMaximizeLibrary);
 
-
     pViewMenu->addSeparator();
 
 
@@ -399,6 +398,25 @@ void WMainMenuBar::initialize() {
             this, SIGNAL(toggleKeyboardShortcuts(bool)));
 
     pOptionsMenu->addAction(pOptionsKeyboard);
+
+    QString sendNotificationsTitle = tr("Send Notifications");
+    QString sendNotificationsText = tr("Send important notifications to the Desktop.") +
+            " " + mayNotBeSupported;
+    bool sendNotificationsEnabled = m_pConfig->getValueString(
+        ConfigKey("[Notifications]", "Enabled")) == "1";
+    auto pOptionsSendNotifications = new QAction(sendNotificationsTitle, this);
+    pOptionsSendNotifications->setCheckable(true);
+    pOptionsSendNotifications->setChecked(sendNotificationsEnabled);
+    // pViewSendNotifications->setShortcut(
+    //     QKeySequence(m_pKbdConfig->getValue(ConfigKey("[KeyboardShortcuts]",
+    //                                               "ViewMenu_SendNotifications"),
+    //                                               tr("", "Menubar|View|Send Notifications"))));
+    pOptionsSendNotifications->setStatusTip(sendNotificationsText);
+    connect(pOptionsSendNotifications, SIGNAL(triggered(bool)),
+            this, SIGNAL(toggleSendNotifications(bool)));
+    // pViewSendNotifications->setWhatsThis(buildWhatsThis(sendNotificationsTitle, sendNotificationsText));
+    // createVisibilityControl(pViewSendNotifications, ConfigKey("[Master]", "send_notifications"));
+    pOptionsMenu->addAction(pOptionsSendNotifications);
 
     pOptionsMenu->addSeparator();
 

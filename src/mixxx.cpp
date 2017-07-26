@@ -948,6 +948,11 @@ void MixxxMainWindow::connectMenuBar() {
     connect(m_pMenuBar, SIGNAL(toggleKeyboardShortcuts(bool)),
             this, SLOT(slotOptionsKeyboard(bool)));
 
+    // Show notifications
+    connect(m_pMenuBar, SIGNAL(toggleSendNotifications(bool)),
+                    this, SLOT(slotOptionsNotifications(bool)));
+
+
     // Help
     connect(m_pMenuBar, SIGNAL(showAbout()),
             this, SLOT(slotHelpAbout()));
@@ -1060,6 +1065,18 @@ void MixxxMainWindow::slotOptionsKeyboard(bool toggle) {
         pConfig->set(ConfigKey("[Keyboard]","Enabled"), ConfigValue(0));
     }
 }
+
+void MixxxMainWindow::slotOptionsNotifications(bool toggle) {
+    UserSettingsPointer pConfig = m_pSettingsManager->settings();
+    if (toggle) {
+        //qDebug() << "Enable keyboard shortcuts/mappings";
+        pConfig->set(ConfigKey("[Notifications]","Enabled"), ConfigValue(1));
+    } else {
+        //qDebug() << "Disable keyboard shortcuts/mappings";
+        pConfig->set(ConfigKey("[Notifications]","Enabled"), ConfigValue(0));
+    }
+}
+
 
 void MixxxMainWindow::slotDeveloperTools(bool visible) {
     if (visible) {
