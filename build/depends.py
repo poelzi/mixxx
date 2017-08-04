@@ -777,6 +777,7 @@ class MixxxCore(Feature):
                    "analyzer/analyzerwaveform.cpp",
                    "analyzer/analyzergain.cpp",
                    "analyzer/analyzerebur128.cpp",
+                   "analyzer/analyzerfingerprint.cpp",
 
                    "controllers/controller.cpp",
                    "controllers/controllerdebug.cpp",

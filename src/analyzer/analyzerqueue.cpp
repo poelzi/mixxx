@@ -7,6 +7,7 @@
 #include "analyzer/analyzergain.h"
 #include "analyzer/analyzerebur128.h"
 #include "analyzer/analyzerwaveform.h"
+#include "analyzer/analyzerfingerprint.h"
 #include "library/dao/analysisdao.h"
 #include "mixer/playerinfo.h"
 #include "sources/soundsourceproxy.h"
@@ -58,6 +59,7 @@ AnalyzerQueue::AnalyzerQueue(
     }
     m_pAnalyzers.push_back(std::make_unique<AnalyzerGain>(pConfig));
     m_pAnalyzers.push_back(std::make_unique<AnalyzerEbur128>(pConfig));
+    m_pAnalyzers.push_back(std::make_unique<AnalyzerFingerprint>(pConfig));
 #ifdef __VAMP__
     m_pAnalyzers.push_back(std::make_unique<AnalyzerBeats>(pConfig));
     m_pAnalyzers.push_back(std::make_unique<AnalyzerKey>(pConfig));

@@ -432,6 +432,18 @@ METADATA
     </description>
     <sql>
       ALTER TABLE library ADD COLUMN datetime_changed DATETIME NULL;
+
+      ALTER TABLE track_locations ADD COLUMN v_bitrate INTEGER NULL;
+      ALTER TABLE track_locations ADD COLUMN v_filetype varchar(8) NULL;
+
+      CREATE TABLE track_fingerprint (
+        id INTEGER primary key AUTOINCREMENT,
+        location_id INTEGER NULL REFERENCES track_locations(id),
+        library_id INTEGER NULL REFERENCES track_locations(id),
+        type INTEGER,
+        hash INTEGER,
+        data BLOB
+      );
     </sql>
   </revision>
 </schema>
