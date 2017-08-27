@@ -8,6 +8,7 @@
 #include "sources/soundsourceproxy.h"
 #include "util/compatibility.h"
 #include "util/event.h"
+#include "util/gitannex.h"
 
 
 CachingReaderWorker::CachingReaderWorker(
@@ -20,6 +21,7 @@ CachingReaderWorker::CachingReaderWorker(
           m_pReaderStatusFIFO(pReaderStatusFIFO),
           m_newTrackAvailable(false),
           m_maxReadableFrameIndex(mixxx::AudioSource::getMinFrameIndex()),
+          m_gitannex_enabled(false),
           m_stop(0) {
 }
 
@@ -126,6 +128,9 @@ void CachingReaderWorker::loadTrack(const TrackPointer& pTrack) {
     }
 
     QString filename = pTrack->getLocation();
+    if (m_gitannex_enabled && GitAnnex::checkAvailability() && GitAnnex::isAnnexedFile(filename)) {
+        qDebug() << "annexed file detected";
+    }
     if (filename.isEmpty() || !pTrack->exists()) {
         // Must unlock before emitting to avoid deadlock
         qDebug() << m_group << "CachingReaderWorker::loadTrack() load failed for\""

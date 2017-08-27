@@ -460,6 +460,27 @@ class FidLib(Dependence):
     def configure(self, build, conf):
         build.env.Append(CPPPATH='#lib/fidlib-0.9.10/')
 
+class QtJson(Dependence):
+    def sources(self, build):
+        symbol = None
+        if build.platform_is_windows:
+            if build.toolchain_is_msvs:
+                symbol = 'T_MSVC'
+            elif build.crosscompile:
+                # Not sure why, but fidlib won't build with mingw32msvc and
+                # T_MINGW
+                symbol = 'T_LINUX'
+            elif build.toolchain_is_gnu:
+                symbol = 'T_MINGW'
+        else:
+            symbol = 'T_LINUX'
+
+        return [build.env.StaticObject('#lib/qt-json/json.cpp',
+                                       CPPDEFINES=symbol)]
+
+    def configure(self, build, conf):
+        build.env.Append(CPPPATH='#lib/qt-json/')
+
 
 class ReplayGain(Dependence):
 
@@ -1143,6 +1164,7 @@ class MixxxCore(Feature):
                    "util/widgethider.cpp",
                    "util/autohidpi.cpp",
                    "util/screensaver.cpp",
+                   "util/gitannex.cpp",
 
                    '#res/mixxx.qrc'
                    ]
@@ -1419,7 +1441,7 @@ class MixxxCore(Feature):
 
     def depends(self, build):
         return [SoundTouch, ReplayGain, Ebur128Mit, PortAudio, PortMIDI, Qt, TestHeaders,
-                FidLib, SndFile, FLAC, OggVorbis, OpenGL, TagLib, ProtoBuf,
+                FidLib, QtJson, SndFile, FLAC, OggVorbis, OpenGL, TagLib, ProtoBuf,
                 Chromaprint, RubberBand, SecurityFramework, CoreServices, IOKit,
                 QtScriptByteArray, Reverb, FpClassify, PortAudioRingBuffer]
 

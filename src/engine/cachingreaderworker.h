@@ -29,7 +29,8 @@ enum ReaderStatus {
     TRACK_LOADED,
     CHUNK_READ_SUCCESS,
     CHUNK_READ_EOF,
-    CHUNK_READ_INVALID
+    CHUNK_READ_INVALID,
+    FILE_TRANSFER
 };
 
 typedef struct ReaderStatusUpdate {
@@ -70,15 +71,27 @@ class CachingReaderWorker : public EngineWorker {
 
     void quitWait();
 
+    Q_PROPERTY(bool gitannexEnabled READ getGitannexEnabled WRITE setGitannexEnabled);
+
+    bool getGitannexEnabled() {
+        return m_gitannex_enabled;
+    }
+    void setGitannexEnabled(bool enabled) {
+        m_gitannex_enabled = enabled;
+    }
+
   signals:
     // Emitted once a new track is loaded and ready to be read from.
     void trackLoading();
     void trackLoaded(TrackPointer pTrack, int iSampleRate, int iNumSamples);
     void trackLoadFailed(TrackPointer pTrack, QString reason);
+    void trackTransfer(int permille);
 
   private:
     QString m_group;
     QString m_tag;
+    // enables/disables git annex support
+    bool m_gitannex_enabled;
 
     // Thread-safe FIFOs for communication between the engine callback and
     // reader thread.
