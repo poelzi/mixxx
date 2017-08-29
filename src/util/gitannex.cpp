@@ -1,4 +1,5 @@
 #include "util/gitannex.h"
+#include "compatibility.h"
 #include <QObject>
 #include <QProcess>
 #include <QDir>
@@ -126,6 +127,13 @@ bool GitAnnex::isAnnexedFile(QString location) {
     return false;
 }
 
+QString GitAnnex::lookupRepository(QString location) {
+    // FIXME: find real repository path
+    QFileInfo fi(location);
+    return fi.dir().path();
+}
+
+
 AnnexRequestState GitAnnex::ensureExists() {
     //QDir(m_location)
     QFileInfo fi(m_location);
@@ -148,4 +156,61 @@ AnnexRequestState GitAnnex::ensureExists() {
     }
     return AnnexRequestState::TRANSFER;
 }
+
+void GitAnnex::cancel() {
+    m_stop = true;
+}
+
+
+bool GitAnnex::getFile() {
+    QProcess annex;
+    QString base = getRepository();
+    annex.setWorkingDirectory(base);
+    QStringList xargs;
+    QByteArray stdout_buffer;
+    QByteArray stderr_buffer;
+    xargs << "annex" << "get" << "--json" << "--json-progress" << "--fast";
+    m_stop = false;
+    bool rv = false;
+
+    annex.start("git", xargs);
+
+    if (!annex.waitForStarted()) {
+        qDebug() << "can't start git annex";
+        // *result = nullptr;
+        return false;
+    }
+
+    while (load_atomic(m_stop) == 0 || annex.bytesAvailable()) {
+        // parse git annex json output
+        if(annex.waitForReadyRead(100)) {
+            QByteArray obuffer = annex.readAllStandardOutput();
+            stdout_buffer.append(obuffer);
+            stderr_buffer.append(annex.readAllStandardError());
+
+            qDebug() << "new buffer:" << obuffer;
+
+        }
+        if(!annex.bytesAvailable() && annex.state() != QProcess::Running) {
+            if(annex.exitCode() == 0) {
+                qDebug() << "successfully fetched annexed file: " << m_location;
+                // get operation was successfull
+                rv = true;
+                break;
+            }
+        }
+
+        if(load_atomic(m_stop)) {
+            rv = false;
+            annex.terminate();
+            if(!annex.waitForFinished(30000)) {
+                // hard terminate the process
+                annex.kill();
+            }
+        }
+    }
+
+    return rv;
+}
+
 

@@ -44,10 +44,13 @@ public:
     static bool runAnnexCommand(QString base, QStringList args, QtJson::JsonObject &result, bool json = true);
     // checks if the file in question is handled by a git annex repository
     static bool isAnnexedFile(QString location);
+    static QString lookupRepository(QString location);
 
     Q_PROPERTY(QString location READ getLocation);
     Q_PROPERTY(AnnexRequestState state READ getState)
+    Q_PROPERTY(int progress READ getProgress)
     Q_PROPERTY(QString error READ getError)
+    Q_PROPERTY(QString repository READ getRepository)
 
     QString getLocation() {
         return m_location;
@@ -56,33 +59,47 @@ public:
         return m_state;
     }
 
+    QString getRepository() {
+        return GitAnnex::lookupRepository(m_location);
+    }
+
     QString getError() {
         return m_error;
     }
 
+    int getProgress() {
+        return m_progress;
+    }
 
+    QString getRepositoryPath();
+
+    // processes the backend operation.
+    bool getFile();
 
 
 signals:
     void fetchComplete(bool success);
     // notifies over the new progress
-    void progress(int newProgress);
+    void progress(int newProgress, int eta);
     // state changed
     void stateChanged(AnnexRequestState state);
 
 public slots:
     AnnexRequestState ensureExists();
+    void cancel();
 
 private:
     QString m_location;
     AnnexRequestState m_state;
     QString m_error;
+    int m_progress;
 
 
 
 // static values for reporting problems
     static int gitannex_installed;
     static QString gitannex_problem;
+    QAtomicInt m_stop;
 };
 
 #endif // GITANNEX_H

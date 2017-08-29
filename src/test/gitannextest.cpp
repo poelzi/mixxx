@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "mixxxtest.h"
+#include <QObject>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -14,11 +15,48 @@
 #include "util/assert.h"
 #include "util/gitannex.h"
 
+// size of large test file
+#define LARGE_FILE (1024*1024*1300)
+
 namespace {
 
 const QDir kTestDir(QDir::current().absoluteFilePath("src/test/gitannex-test-data"));
 
-class GitAnnexTest : public MixxxTest {};
+class GitAnnexTest : public QObject, public MixxxTest {
+    Q_OBJECT;
+
+public:
+
+public slots:
+    void fetchComplete(bool success);
+
+    // notifies over the new progress
+     void progress(int newProgress, int eta);
+
+    // state changed
+     void stateChanged(AnnexRequestState state);
+
+protected:
+    int m_success;
+    int m_eta;
+    int m_progress;
+    AnnexRequestState m_state;
+};
+
+#include "test/gitannextest.moc"
+
+void GitAnnexTest::fetchComplete(bool success) {
+    m_success = success;
+}
+
+void GitAnnexTest::progress(int newProgress, int eta) {
+   m_progress = newProgress;
+   m_eta = eta;
+}
+
+void GitAnnexTest::stateChanged(AnnexRequestState state) {
+   m_state = state;
+}
 
 class FileRemover final {
 public:
@@ -178,6 +216,11 @@ TEST_F(GitAnnexTest, TestGitAnnexGet) {
     QString repo1 = initRepo("annex1");
     QString repo2 = generateTemporaryDir("annex2", false);
 
+    // garbage buffer used to prevent all zero files in copy operation
+    char buffer[1024];
+    for(size_t i = 0; i < sizeof (buffer); i++)
+        buffer[i] = rand() % 256;
+
     // write some files and add them to git annex
     QString test_file1 = QDir(repo1).filePath("test_file1");
     QFile tf1(test_file1);
@@ -185,20 +228,33 @@ TEST_F(GitAnnexTest, TestGitAnnexGet) {
     tf1.write("test1");
     tf1.close();
 
+    QString test_file_large = QDir(repo1).filePath("test_large");
+    QFile tfl(test_file_large);
+
+    tfl.open(QIODevice::ReadWrite);
+    int todo = LARGE_FILE;
+    while(todo > 0) {
+        tfl.write(&buffer[0], sizeof (buffer));
+        todo -= sizeof (buffer);
+    }
+    tfl.close();
+
     // create a symbolic link that does not point to a annexed file for testing
     QFile::link("/dev/null", QDir(repo1).filePath("link1"));
     QFile::link(".git/notannex/something", QDir(repo1).filePath("link2"));
 
     EXPECT_FALSE(GitAnnex::isAnnexedFile(test_file1));
+    EXPECT_FALSE(GitAnnex::isAnnexedFile(test_file_large));
     EXPECT_FALSE(GitAnnex::isAnnexedFile(QDir(repo1).filePath("link1")));
     EXPECT_FALSE(GitAnnex::isAnnexedFile(QDir(repo1).filePath("link2")));
 
     QStringList args;
-    args << "add" << test_file1;
+    args << "add" << test_file1 << test_file_large;
     QtJson::JsonObject result;
 
     EXPECT_TRUE(GitAnnex::runAnnexCommand(repo1, args, result, false));
     EXPECT_TRUE(GitAnnex::isAnnexedFile(test_file1));
+    EXPECT_TRUE(GitAnnex::isAnnexedFile(test_file_large));
 
     args.clear();
     result.clear();
@@ -230,6 +286,28 @@ TEST_F(GitAnnexTest, TestGitAnnexGet) {
 
     EXPECT_EQ(exists, AnnexRequestState::TRANSFER);
 
+    m_progress = -1;
+    m_success = -1;
+    m_eta = -1;
+
+    QObject::connect(&ga, SIGNAL(fetchComplete(bool)),
+                     this, SLOT(fetchComplete(bool)));
+    QObject::connect(&ga, SIGNAL(progress(int, int)),
+                     this, SLOT(progress(int, int)));
+    QObject::connect(&ga, SIGNAL(stateChanged(AnnexRequestState)),
+                     this, SLOT(stateChanged(AnnexRequestState)));
+
+    EXPECT_TRUE(ga.getFile());
+    EXPECT_EQ(1000, m_progress);
+    EXPECT_EQ(true, m_success);
+    //EXPECT_EQ(m_)
+/*
+    void fetchComplete(bool success);
+    // notifies over the new progress
+    void progress(int newProgress, int eta);
+    // state changed
+    void stateChanged(AnnexRequestState state);
+*/
 
     //QTimer exitTimer;
     //QObject::connect(&exitTimer, &QTimer::timeout, &app, QCoreApplication::quit);
