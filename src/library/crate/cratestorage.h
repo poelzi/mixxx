@@ -284,6 +284,9 @@ class CrateStorage: public virtual /*implements*/ SqlStorage {
     QSet<CrateId> collectCrateIdsOfTracks(
             const QList<TrackId>& trackIds) const;
 
+    // Counts the tracks in each crate of a given track list
+    QHash<CrateId, int> countTracksInCrates(
+            const QList<TrackId>& trackIds) const;
 
     /////////////////////////////////////////////////////////////////////////
     // CrateSummary view operations (read-only, const)

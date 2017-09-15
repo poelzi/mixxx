@@ -507,6 +507,24 @@ QSet<CrateId> CrateStorage::collectCrateIdsOfTracks(const QList<TrackId>& trackI
     return trackCrates;
 }
 
+QHash<CrateId, int> CrateStorage::countTracksInCrates(const QList<TrackId>& trackIds) const {
+    // NOTE(poelzi): One query per track id. This could be optimized
+    // by querying for chunks of track ids and collecting the results.
+    QHash<CrateId, int> rv;
+    for (const auto& trackId: trackIds) {
+        // NOTE(uklotzde): The query result does not need to be sorted by crate id
+        // here. But since the coresponding FK column is indexed the impact on the
+        // performance should be negligible. By reusing an existing query we reduce
+        // the amount of code and the number of prepared SQL queries.
+        CrateTrackSelectResult trackCrates(selectTrackCratesSorted(trackId));
+        while (trackCrates.next()) {
+            rv[trackCrates.crateId()] += 1;
+        }
+    }
+    return rv;
+}
+
+
 
 bool CrateStorage::onInsertingCrate(
         const Crate& crate,

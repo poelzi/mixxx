@@ -4,6 +4,8 @@
 #include <QUrl>
 #include <QDrag>
 #include <QShortcut>
+#include <QWidgetAction>
+#include <QCheckBox>
 
 #include "widget/wtracktableview.h"
 
@@ -93,8 +95,9 @@ WTrackTableView::WTrackTableView(QWidget * parent,
 
     connect(&m_playlistMapper, SIGNAL(mapped(int)),
             this, SLOT(addSelectionToPlaylist(int)));
-    connect(&m_crateMapper, SIGNAL(mapped(int)),
-            this, SLOT(addSelectionToCrate(int)));
+
+    connect(&m_crateMapper, SIGNAL(mapped(QWidget *)),
+            this, SLOT(addRemoveSelectionInCrate(QWidget *)));
 
     m_pCOTGuiTick = new ControlProxy("[Master]", "guiTick50ms", this);
     m_pCOTGuiTick->connectValueChanged(SLOT(slotGuiTick50ms(double)));
@@ -828,20 +831,49 @@ void WTrackTableView::contextMenuEvent(QContextMenuEvent* event) {
     if (modelHasCapabilities(TrackModel::TRACKMODELCAPS_ADDTOCRATE)) {
         m_pCrateMenu->clear();
         CrateSelectResult allCrates(m_pTrackCollection->crates().selectCrates());
+
+        const QList<TrackId> trackIds = getSelectedTrackIds();
+
+        QHash<CrateId, int> currentCrates(m_pTrackCollection->crates().\
+                                          countTracksInCrates(trackIds));
         Crate crate;
         while (allCrates.populateNext(&crate)) {
-            auto pAction = std::make_unique<QAction>(crate.getName(), m_pCrateMenu);
+            auto pAction = std::make_unique<QWidgetAction>(m_pCrateMenu);
+            auto pCheckBox = std::make_unique<QCheckBox>(m_pCrateMenu);
+
+            pCheckBox->setText(crate.getName());
+            pCheckBox->setProperty("crateId",
+                                   QVariant::fromValue(crate.getId()));
+            pCheckBox->setEnabled(!crate.isLocked());
             pAction->setEnabled(!crate.isLocked());
-            m_crateMapper.setMapping(pAction.get(), crate.getId().toInt());
-            connect(pAction.get(), SIGNAL(triggered()), &m_crateMapper, SLOT(map()));
+            pAction->setDefaultWidget(pCheckBox.get());
+
+
+            auto i = currentCrates.find(crate.getId());
+            if(i != currentCrates.end() && i.key() == crate.getId()) {
+                if(i.value() != trackIds.size()) {
+                    pCheckBox->setTristate(true);
+                    pCheckBox->setCheckState(Qt::PartiallyChecked);
+                } else {
+                    pCheckBox->setChecked(true);
+                }
+            }
+
+            m_crateMapper.setMapping(pAction.get(), pCheckBox.get());
+            m_crateMapper.setMapping(pCheckBox.get(), pCheckBox.get());
             m_pCrateMenu->addAction(pAction.get());
+            connect(pAction.get(), SIGNAL(triggered()),
+                    &m_crateMapper, SLOT(map()));
+            connect(pCheckBox.get(), SIGNAL(stateChanged(int)),
+                    &m_crateMapper, SLOT(map()));
+
             pAction.release();
+            pCheckBox.release();
         }
         m_pCrateMenu->addSeparator();
         QAction* newCrateAction = new QAction(tr("Create New Crate"), m_pCrateMenu);
         m_pCrateMenu->addAction(newCrateAction);
-        m_crateMapper.setMapping(newCrateAction, CrateId().toInt());// invalid crate id for new crate
-        connect(newCrateAction, SIGNAL(triggered()), &m_crateMapper, SLOT(map()));
+        connect(newCrateAction, SIGNAL(triggered()), this, SLOT(addSelectionToNewCrate()));
 
         m_pMenu->addMenu(m_pCrateMenu);
     }
@@ -1466,22 +1498,57 @@ void WTrackTableView::addSelectionToPlaylist(int iPlaylistId) {
     playlistDao.appendTracksToPlaylist(trackIds, iPlaylistId);
 }
 
-void WTrackTableView::addSelectionToCrate(int iCrateId) {
+void WTrackTableView::addRemoveSelectionInCrate(QWidget* qc) {
+    QVariant crateqv = qc->property("crateId");
+    if (!crateqv.canConvert<CrateId>()) {
+        qWarning() << "crateId is not ef CrateId type";
+        return;
+    }
+    CrateId crateId = crateqv.value<CrateId>();
+
     const QList<TrackId> trackIds = getSelectedTrackIds();
+
     if (trackIds.isEmpty()) {
         qWarning() << "No tracks selected for crate";
         return;
     }
 
-    CrateId crateId(iCrateId);
-    if (!crateId.isValid()) { // i.e. a new crate is suppose to be created
-        crateId = CrateFeatureHelper(
-                m_pTrackCollection, m_pConfig).createEmptyCrate();
+    // we need to disable tristate again as the mixed state will now be gone and can't be brought back
+    if (qc->property("tristate").toBool() == true) {
+        qc->setProperty("tristate", false);
     }
+    if(qc->property("checked").toBool() == false) {
+        if (crateId.isValid()) {
+            m_pTrackCollection->removeCrateTracks(crateId, trackIds);
+        }
+    } else {
+        if (!crateId.isValid()) { // i.e. a new crate is suppose to be created
+            crateId = CrateFeatureHelper(
+                    m_pTrackCollection, m_pConfig).createEmptyCrate();
+        }
+        if (crateId.isValid()) {
+            m_pTrackCollection->unhideTracks(trackIds);
+            m_pTrackCollection->addCrateTracks(crateId, trackIds);
+        }
+    }
+}
+
+void WTrackTableView::addSelectionToNewCrate() {
+    const QList<TrackId> trackIds = getSelectedTrackIds();
+
+    if (trackIds.isEmpty()) {
+        qWarning() << "No tracks selected for crate";
+        return;
+    }
+
+    CrateId crateId = CrateFeatureHelper(
+            m_pTrackCollection, m_pConfig).createEmptyCrate();
+
     if (crateId.isValid()) {
         m_pTrackCollection->unhideTracks(trackIds);
         m_pTrackCollection->addCrateTracks(crateId, trackIds);
     }
+
 }
 
 void WTrackTableView::doSortByColumn(int headerSection) {
