@@ -1498,13 +1498,13 @@ void WTrackTableView::addSelectionToPlaylist(int iPlaylistId) {
     playlistDao.appendTracksToPlaylist(trackIds, iPlaylistId);
 }
 
-void WTrackTableView::addRemoveSelectionInCrate(QWidget* qc) {
-    QVariant crateqv = qc->property("crateId");
-    if (!crateqv.canConvert<CrateId>()) {
-        qWarning() << "crateId is not ef CrateId type";
+void WTrackTableView::addRemoveSelectionInCrate(QWidget* pWidget) {
+    auto pCheckBox = qobject_cast<QCheckBox*>(pWidget);
+    VERIFY_OR_DEBUG_ASSERT(pCheckBox) {
+        qWarning() << "pWidget is not a QCheckBox";
         return;
     }
-    CrateId crateId = crateqv.value<CrateId>();
+    CrateId crateId = pCheckBox->property("crateId").value<CrateId>();
 
     const QList<TrackId> trackIds = getSelectedTrackIds();
 
@@ -1514,10 +1514,8 @@ void WTrackTableView::addRemoveSelectionInCrate(QWidget* qc) {
     }
 
     // we need to disable tristate again as the mixed state will now be gone and can't be brought back
-    if (qc->property("tristate").toBool() == true) {
-        qc->setProperty("tristate", false);
-    }
-    if(qc->property("checked").toBool() == false) {
+    pCheckBox->setTristate(false);
+    if(!pCheckBox->isChecked()) {
         if (crateId.isValid()) {
             m_pTrackCollection->removeCrateTracks(crateId, trackIds);
         }
