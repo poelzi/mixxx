@@ -36,7 +36,6 @@ class BeatUtils {
 
         return bpm;
     }
-
     static double isNearInteger(double bpm, const double epsilon, const double minBPM, const double maxBPM) {
         return bpm >= minBPM && bpm <= maxBPM && fabs(bpm - round(bpm)) <= epsilon;
     };
@@ -81,6 +80,8 @@ class BeatUtils {
     static QList<double> computeWindowedBpmsAndFrequencyHistogram(
         const QVector<double> beats, const int windowSize, const int windowStep,
         const int sampleRate, QMap<double, int>* frequencyHistogram);
+    static double computeAverageTempoDeviation(
+            const QVector<double> beats, const int SampleRate);
 
 };
 
