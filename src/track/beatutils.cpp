@@ -327,10 +327,10 @@ double BeatUtils::calculateBpm(const QVector<double>& beats, int SampleRate,
     // and therefore most likely should have a perfect round number as bpm
     // test if 2/3, 3/2 or 2/1 creates a bpm which is a whole number in reason
     const bool near_integer = fabs(round(perfectAverageBpm) - perfectAverageBpm) <= kRoundFactor;
-    double avarageTampoDeviation = computeAverageTempoDeviation(beats, SampleRate);
-    qDebug() << "avarageTampoDeviation=" << avarageTampoDeviation;
+    double avarageTempoDeviation = computeAverageTempoDeviation(beats, SampleRate);
+    qDebug() << "avarageTampoDeviation=" << avarageTempoDeviation;
 
-    if (!near_integer && avarageTampoDeviation <= kMinMachineTempoDeviaton) {
+    if (!near_integer && avarageTempoDeviation <= kMinMachineTempoDeviaton) {
         const double bpm_32 = perfectAverageBpm * 3.0/2.0;
         const double bpm_23 = perfectAverageBpm * 2.0/3.0;
         const double bpm_21 = perfectAverageBpm * 2.0;
