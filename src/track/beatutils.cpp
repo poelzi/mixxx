@@ -30,6 +30,7 @@ const double kHistogramDecimalScale = pow(10.0, kHistogramDecimalPlaces);
 const double kBpmFilterTolerance = 1.0;
 const double k23Epsilon = 0.1;
 const double kRoundFactor = 0.05;
+const double kMinMachineTempoDeviaton = 0.0075;
 
 void BeatUtils::printBeatStatistics(const QVector<double>& beats, int SampleRate) {
     if (!sDebug) {
@@ -144,6 +145,32 @@ double BeatUtils::computeFilteredWeightedAverage(
     return filterWeightedAverage / static_cast<double>(filterSum);
 }
 
+double BeatUtils::computeAverageTempoDeviation(
+        const QVector<double> beats, const int SampleRate) {
+    
+    QVectorIterator<double> beat(beats);
+    QVector<double> beatsTimeDiff;
+    while (beat.hasNext()) {
+        double thisBeat = beat.next();
+        double nextBeat;
+        if (beat.hasNext()) {
+            nextBeat = beat.peekNext();
+        } else {
+            break;
+        }
+        beatsTimeDiff.append(nextBeat - thisBeat);
+    }
+    double averageBeatTimeDiff = std::accumulate(
+        beatsTimeDiff.begin(), beatsTimeDiff.end(), 0.0) / beatsTimeDiff.count();
+    QVector<double> beatDeviation;
+    QVectorIterator<double> beatTimeDiff(beatsTimeDiff);
+    while (beatTimeDiff.hasNext())  {
+        beatDeviation.append(fabs(beatTimeDiff.next() - averageBeatTimeDiff));
+    }
+    double averageBeatDeviation = std::accumulate(
+        beatDeviation.begin(), beatDeviation.end(), 0.0) / beatDeviation.count();
+    return averageBeatDeviation /= SampleRate;
+}
 double BeatUtils::calculateBpm(const QVector<double>& beats, int SampleRate,
                                int min_bpm, int max_bpm) {
     /*
@@ -296,10 +323,14 @@ double BeatUtils::calculateBpm(const QVector<double>& beats, int SampleRate,
     bool perform_rounding;
     double bpm_diff;
     double rounded_bpm;
-    // test if 2/3 or 3/2 creates a bpm which is a whole number in reason
+    // if avarageTempoDeviation is near 0 music is problably machine made
+    // and therefore most likely should have a perfect round number as bpm
+    // test if 2/3, 3/2 or 2/1 creates a bpm which is a whole number in reason
     const bool near_integer = fabs(round(perfectAverageBpm) - perfectAverageBpm) <= kRoundFactor;
+    double avarageTampoDeviation = computeAverageTempoDeviation(beats, SampleRate);
+    qDebug() << "avarageTampoDeviation=" << avarageTampoDeviation;
 
-    if (!near_integer) {
+    if (!near_integer && avarageTampoDeviation <= kMinMachineTempoDeviaton) {
         const double bpm_32 = perfectAverageBpm * 3.0/2.0;
         const double bpm_23 = perfectAverageBpm * 2.0/3.0;
         const double bpm_21 = perfectAverageBpm * 2.0;
