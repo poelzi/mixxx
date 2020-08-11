@@ -51,6 +51,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     void slotCancel();
 
     void trackUpdated();
+    void slotBpmLockChanged(int state);
 
     void slotBpmDouble();
     void slotBpmHalve();
@@ -86,6 +87,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     void loadTrackInternal(const TrackPointer& pTrack);
     void populateFields(const Track& track);
     void reloadTrackBeats(const Track& track);
+    void enableBPMControls(bool enabled);
     void saveTrack();
     void unloadTrack(bool save);
     void clear();
