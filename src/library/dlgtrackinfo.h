@@ -60,6 +60,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     void slotBpmFourThirds();
     void slotBpmThreeHalves();
     void slotBpmClear();
+    void slotBpmRound();
     void slotBpmConstChanged(int state);
     void slotBpmTap(double averageLength, int numSamples);
     void slotSpinBpmValueChanged(double value);
@@ -96,6 +97,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     mixxx::BeatsPointer m_pBeatsClone;
     Keys m_keysClone;
     bool m_trackHasBeatMap;
+    bool m_beatsChanged;
 
     QScopedPointer<TapFilter> m_pTapFilter;
     QScopedPointer<DlgTagFetcher> m_pTagFetcher;
