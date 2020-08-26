@@ -80,9 +80,9 @@ BpmControl::BpmControl(QString group,
     connect(m_pTranslateBeatsLater, &ControlObject::valueChanged,
             this, &BpmControl::slotTranslateBeatsLater,
             Qt::DirectConnection);
-    m_pLockBPM = new ControlPushButton(ConfigKey(group, "lock_bpm"));
-    m_pLockBPM->setButtonMode(ControlPushButton::TOGGLE);
-    connect(m_pLockBPM, &ControlObject::valueChanged,
+    m_pLockBpm = new ControlPushButton(ConfigKey(group, "lock_bpm"));
+    m_pLockBpm->setButtonMode(ControlPushButton::TOGGLE);
+    connect(m_pLockBpm, &ControlObject::valueChanged,
             this, &BpmControl::slotBpmLock,
             Qt::DirectConnection);
 
@@ -201,7 +201,7 @@ void BpmControl::slotTranslateBeatsLater(double v) {
 
 void BpmControl::slotBpmLock(double v) {
     TrackPointer track = getEngineBuffer()->getLoadedTrack();
-    if(track) {
+    if (track) {
         track->setBpmLocked(v > 0);
     }
 }
@@ -949,7 +949,7 @@ void BpmControl::trackLoaded(TrackPointer pNewTrack) {
     mixxx::BeatsPointer pBeats;
     if (pNewTrack) {
         pBeats = pNewTrack->getBeats();
-        m_pLockBPM->forceSet(pNewTrack->isBpmLocked());
+        m_pLockBpm->forceSet(pNewTrack->isBpmLocked());
         connect(
                 pNewTrack.get(),
                 &Track::bpmLockUpdated,
@@ -971,7 +971,7 @@ void BpmControl::trackUnloaded(TrackPointer pOldTrack) {
 }
 
 void BpmControl::slotUpdateBPMLock(bool locked) {
-    m_pLockBPM->forceSet(locked ? 1.0 : 0.0);
+    m_pLockBpm->forceSet(locked ? 1.0 : 0.0);
 }
 
 void BpmControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
