@@ -36,7 +36,7 @@ class BeatGrid final : public Beats {
     // comments in beats.h
 
     Beats::CapabilitiesFlags getCapabilities() const override {
-        return BEATSCAP_TRANSLATE | BEATSCAP_SCALE | BEATSCAP_SETBPM;
+        return BEATSCAP_TRANSLATE | BEATSCAP_SCALE | BEATSCAP_SETBPM | BEATSCAP_ROUND;
     }
 
     QByteArray toByteArray() const override;
@@ -71,6 +71,7 @@ class BeatGrid final : public Beats {
     void translate(double dNumSamples) override;
     void scale(enum BPMScale scale) override;
     void setBpm(double dBpm) override;
+    void round() override;
 
     SINT getSampleRate() const override {
         return m_iSampleRate;

@@ -365,4 +365,13 @@ void BeatGrid::setBpm(double dBpm) {
     emit updated();
 }
 
+void BeatGrid::round() {
+    using ::round;
+    double bpm = getBpm();
+    bpm = round(bpm);
+    if(bpm > 0) {
+        setBpm(bpm);
+    }
+}
+
 } // namespace mixxx
