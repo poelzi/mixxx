@@ -184,7 +184,7 @@ void BpmControl::slotTranslateBeatsEarlier(double v) {
     mixxx::BeatsPointer pBeats = m_pBeats;
     if (v > 0 && pBeats &&
             (pBeats->getCapabilities() & mixxx::Beats::BEATSCAP_TRANSLATE)) {
-        const int translate_dist = getSampleOfTrack().rate * -.01;
+        const int translate_dist = getSampleOfTrack().rate * (-.01 * v);
         pBeats->translate(translate_dist);
     }
 }
@@ -194,7 +194,7 @@ void BpmControl::slotTranslateBeatsLater(double v) {
     if (v > 0 && pBeats &&
             (pBeats->getCapabilities() & mixxx::Beats::BEATSCAP_TRANSLATE)) {
         // TODO(rryan): Track::getSampleRate is possibly inaccurate!
-        const int translate_dist = getSampleOfTrack().rate * .01;
+        const int translate_dist = getSampleOfTrack().rate * (.01 * v);
         pBeats->translate(translate_dist);
     }
 }
