@@ -18,6 +18,22 @@ class ControlProxy;
 class VisualPlayPosition;
 class VSyncThread;
 
+static QMap<double, QString> WaveformZoomLevels{
+    {0.5,    "200 %"},
+    {0.6666, "150 %"},
+    {1.0,    "100 %"},
+    {2.0,    "50.0 %"},
+    {3.0,    "33.3 %"},
+    {4.0,    "25.0 %"},
+    {5.0,    "20.0 %"},
+    {6.0,    "16.7 %"},
+    {7.0,    "14.3 %"},
+    {8.0,    "12.5 %"},
+    {9.0,    "11.1 %"},
+    {10.0,   "10.0 %"},
+};
+
+
 class WaveformWidgetRenderer {
   public:
     static const double s_waveformMinZoom;

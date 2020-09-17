@@ -12,7 +12,7 @@
 #include "waveform/waveform.h"
 #include "widget/wwidget.h"
 
-const double WaveformWidgetRenderer::s_waveformMinZoom = 0.5;
+const double WaveformWidgetRenderer::s_waveformMinZoom = 0.25;
 const double WaveformWidgetRenderer::s_waveformMaxZoom = 15.0;
 const double WaveformWidgetRenderer::s_waveformDefaultZoom = 3.0;
 const double WaveformWidgetRenderer::s_defaultPlayMarkerPosition = 0.5;
