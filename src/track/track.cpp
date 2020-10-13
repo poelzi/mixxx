@@ -1234,6 +1234,7 @@ void Track::setBpmLocked(bool bpmLocked) {
     QMutexLocker lock(&m_qMutex);
     if (compareAndSet(m_record.ptrBpmLocked(), bpmLocked)) {
         markDirtyAndUnlock(&lock);
+        emit bpmLockUpdated(bpmLocked);
     }
 }
 

@@ -81,6 +81,13 @@ BpmControl::BpmControl(QString group,
     connect(m_pTranslateBeatsLater, &ControlObject::valueChanged,
             this, &BpmControl::slotTranslateBeatsLater,
             Qt::DirectConnection);
+    m_pLockBeatgrid = new ControlPushButton(ConfigKey(group, "beatgrid_lock"));
+    m_pLockBeatgrid->setButtonMode(ControlPushButton::TOGGLE);
+    connect(m_pLockBeatgrid,
+            &ControlObject::valueChanged,
+            this,
+            &BpmControl::slotBeatgridLock,
+            Qt::DirectConnection);
 
     // Pick a wide range (kBpmRangeMin to kBpmRangeMax) and allow out of bounds sets. This lets you
     // map a soft-takeover MIDI knob to the BPM. This also creates bpm_up and
@@ -180,7 +187,7 @@ void BpmControl::slotTranslateBeatsEarlier(double v) {
     mixxx::BeatsPointer pBeats = m_pBeats;
     if (v > 0 && pBeats &&
             (pBeats->getCapabilities() & mixxx::Beats::BEATSCAP_TRANSLATE)) {
-        const int translate_dist = getSampleOfTrack().rate * -.01;
+        const int translate_dist = getSampleOfTrack().rate * (-.01 * v);
         pBeats->translate(translate_dist);
     }
 }
@@ -190,8 +197,15 @@ void BpmControl::slotTranslateBeatsLater(double v) {
     if (v > 0 && pBeats &&
             (pBeats->getCapabilities() & mixxx::Beats::BEATSCAP_TRANSLATE)) {
         // TODO(rryan): Track::getSampleRate is possibly inaccurate!
-        const int translate_dist = getSampleOfTrack().rate * .01;
+        const int translate_dist = getSampleOfTrack().rate * (.01 * v);
         pBeats->translate(translate_dist);
+    }
+}
+
+void BpmControl::slotBeatgridLock(double v) {
+    TrackPointer track = getEngineBuffer()->getLoadedTrack();
+    if (track) {
+        track->setBpmLocked(v > 0);
     }
 }
 
@@ -938,8 +952,27 @@ void BpmControl::trackLoaded(TrackPointer pNewTrack) {
     mixxx::BeatsPointer pBeats;
     if (pNewTrack) {
         pBeats = pNewTrack->getBeats();
+        m_pLockBeatgrid->forceSet(pNewTrack->isBpmLocked());
+        connect(
+                pNewTrack.get(),
+                &Track::bpmLockUpdated,
+                this,
+                [this](bool locked) {
+                    m_pLockBeatgrid->forceSet(locked ? 1.0 : 0.0);
+                },
+                Qt::DirectConnection);
     }
     trackBeatsUpdated(pBeats);
+}
+// called from an engine worker thread
+void BpmControl::trackUnloaded(TrackPointer pOldTrack) {
+    if (pOldTrack) {
+        disconnect(
+                pOldTrack.get(),
+                nullptr,
+                this,
+                nullptr);
+    }
 }
 
 void BpmControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {

@@ -12,6 +12,7 @@
 #include "library/trackcollectionmanager.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
+#include "track/bpm.h"
 #include "util/assert.h"
 #include "util/compatibility.h"
 #include "util/datetime.h"
@@ -505,7 +506,7 @@ QVariant BaseTrackTableModel::roleValue(
             bool ok;
             const auto bpmValue = rawValue.toDouble(&ok);
             if (ok && bpmValue > 0.0) {
-                return QString("%1").arg(bpmValue, 0, 'f', 1);
+                return mixxx::Bpm::displayString(bpmValue);
             } else {
                 return QChar('-');
             }

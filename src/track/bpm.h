@@ -58,6 +58,17 @@ public:
         return static_cast<int>(std::round(value));
     }
 
+    /// Returns a string depending on non zero decimal placess.
+    /// If the value is round enough, use 1 decimal places, otherwise 2
+    /// @param {value} bpm value
+    static QString displayString(double value) {
+        if (fabs(round(value * 10) / 10 - value) < 0.001) {
+            return QString("%1").arg(value, 0, 'f', 1);
+        } else {
+            return QString("%1").arg(value, 0, 'f', 2);
+        }
+    }
+
     enum class Comparison {
         Default, // full precision
         Integer, // rounded
