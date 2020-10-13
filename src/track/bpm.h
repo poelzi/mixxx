@@ -55,7 +55,7 @@ public:
     static double valueFromString(const QString& str, bool* pValid = nullptr);
     static QString valueToString(double value);
     static int valueToInteger(double value) {
-        return std::round(value);
+        return static_cast<int>(std::round(value));
     }
 
     /// Returns a string depending on non zero decimal placess.
