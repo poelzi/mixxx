@@ -1,6 +1,5 @@
 #include "widget/whotcuebutton.h"
 
-#include <QGuiApplication>
 #include <QStyleOption>
 #include <QStylePainter>
 #include <QtDebug>
@@ -90,7 +89,7 @@ void WHotcueButton::mousePressEvent(QMouseEvent* e) {
             if (!pHotCue) {
                 return;
             }
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+            if (e->modifiers().testFlag(Qt::ShiftModifier)) {
                 pTrack->removeCue(pHotCue);
                 return;
             }

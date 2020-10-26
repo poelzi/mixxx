@@ -53,6 +53,9 @@ class WCueMenuPopup : public QWidget {
     void slotEditLabel();
     void slotDeleteCue();
     void slotChangeCueColor(mixxx::RgbColor::optional_t color);
+    void slotClose() {
+        close();
+    }
 
   private:
     ColorPaletteSettings m_colorPaletteSettings;
@@ -64,6 +67,7 @@ class WCueMenuPopup : public QWidget {
     QLineEdit* m_pEditLabel;
     WColorPicker* m_pColorPicker;
     QPushButton* m_pDeleteCue;
+    QPushButton* m_pCloseButton;
 
   protected:
     void closeEvent(QCloseEvent* event) override;

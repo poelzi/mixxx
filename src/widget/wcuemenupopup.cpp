@@ -42,6 +42,12 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     m_pDeleteCue->setObjectName("CueDeleteButton");
     connect(m_pDeleteCue, &QPushButton::clicked, this, &WCueMenuPopup::slotDeleteCue);
 
+    // FIXME(XXX): icon instead of text ?
+    m_pCloseButton = new QPushButton("X", this);
+    m_pCloseButton->setToolTip(tr("Close"));
+    m_pCloseButton->setObjectName("CloseButton");
+    connect(m_pCloseButton, &QPushButton::clicked, this, &WCueMenuPopup::slotClose);
+
     QHBoxLayout* pLabelLayout = new QHBoxLayout();
     pLabelLayout->addWidget(m_pCueNumber);
     pLabelLayout->addStretch(1);
@@ -53,6 +59,7 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     pLeftLayout->addWidget(m_pColorPicker);
 
     QVBoxLayout* pRightLayout = new QVBoxLayout();
+    pRightLayout->addWidget(m_pCloseButton);
     pRightLayout->addWidget(m_pDeleteCue);
     pRightLayout->addStretch(1);
 
