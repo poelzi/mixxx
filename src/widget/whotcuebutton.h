@@ -29,7 +29,6 @@ class WHotcueButton : public WPushButton {
   private:
     ConfigKey createConfigKey(const QString& name);
     void updateStyleSheet();
-    QWidget* m_pWindow;
 
     const QString m_group;
     int m_hotcue;
