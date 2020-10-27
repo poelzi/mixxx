@@ -448,6 +448,7 @@ double BpmControl::calcSyncAdjustment(bool userTweakingSync) {
         kLogger.trace() << m_group << "****************";
         kLogger.trace() << "master beat distance:" << syncTargetBeatDistance;
         kLogger.trace() << "my     beat distance:" << thisBeatDistance;
+        kLogger.trace() << "user offset distance:" << m_dUserOffset.getValue();
         kLogger.trace() << "error               :"
                         << (shortest_distance - m_dUserOffset.getValue());
         kLogger.trace() << "user offset         :" << m_dUserOffset.getValue();
@@ -1042,6 +1043,9 @@ double BpmControl::updateBeatDistance() {
 }
 
 void BpmControl::setTargetBeatDistance(double beatDistance) {
+    if (kLogger.traceEnabled()) {
+        qDebug() << getGroup() << "BpmControl::setTargetBeatDistance:" << beatDistance;
+    }
     m_dSyncTargetBeatDistance.setValue(beatDistance);
 }
 
