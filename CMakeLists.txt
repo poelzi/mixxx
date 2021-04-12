@@ -1285,6 +1285,13 @@ install(
     .
 )
 
+install(
+  FILES
+    tools/mixxx-isolate.py
+  RUNTIME DESTINATION
+    "${MIXXX_INSTALL_BINDIR}/mixxx-isolate"
+)
+
 # Skins
 install(
   DIRECTORY
