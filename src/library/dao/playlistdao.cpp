@@ -1,7 +1,5 @@
 #include "library/dao/playlistdao.h"
 
-#include "moc_playlistdao.cpp"
-
 #include <QRandomGenerator>
 #include <QtDebug>
 #include <QtSql>
@@ -9,10 +7,11 @@
 #include "library/autodj/autodjprocessor.h"
 #include "library/queryutil.h"
 #include "library/trackcollection.h"
+#include "moc_playlistdao.cpp"
 #include "track/track.h"
 #include "util/compatibility.h"
-#include "util/db/fwdsqlquery.h"
 #include "util/db/dbconnection.h"
+#include "util/db/fwdsqlquery.h"
 #include "util/math.h"
 
 PlaylistDAO::PlaylistDAO()

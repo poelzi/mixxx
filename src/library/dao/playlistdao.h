@@ -122,6 +122,7 @@ class PlaylistDAO : public QObject, public virtual DAO {
             HiddenType type = PLHT_NOT_HIDDEN);
     QList<PlaylistSummary> createPlaylistSummaryForTracks(QList<TrackId> tracks,
             HiddenType type = PLHT_NOT_HIDDEN);
+    PlaylistSummary getPlaylistSummary(int playlistId);
 
     void setAutoDJProcessor(AutoDJProcessor* pAutoDJProcessor);
 
