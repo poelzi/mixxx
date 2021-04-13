@@ -24,6 +24,8 @@ CmdlineArgs::CmdlineArgs()
           m_debugAssertBreak(false),
           m_settingsPathSet(false),
           m_useColors(false),
+          m_engineCpuId(-1),
+          m_engineCpuSet(),
           m_logLevel(mixxx::kLogLevelDefault),
           m_logFlushLevel(mixxx::kLogFlushLevelDefault),
 // We are not ready to switch to XDG folders under Linux, so keeping $HOME/.mixxx as preferences folder. see lp:1463273
@@ -155,6 +157,18 @@ bool CmdlineArgs::parse(const QStringList& arguments) {
             QStringLiteral("logFlushLevel"));
     parser.addOption(logFlushLevel);
 
+    const QCommandLineOption engineCpuId(QStringList() << "engine-cpu-id",
+            QCoreApplication::translate("main",
+                    "Bind mixxx to a specific CPU Core. Use mixxx-isolate if possible"),
+            QStringLiteral("engineCpuId"));
+    parser.addOption(engineCpuId);
+
+    const QCommandLineOption engineCpuSet(QStringList() << "engine-cpu-set",
+            QCoreApplication::translate("main",
+                    "Move Engine to specified cpuset cgroup. Try use mixxx-isolate instead."),
+            QStringLiteral("engineCpuSet"));
+    parser.addOption(engineCpuSet);
+
 #ifdef MIXXX_BUILD_DEBUG
     QCommandLineOption debugAssertBreak(QStringList() << "debug-assert-break"
                                                       << "debugAssertBreak",
@@ -200,6 +214,20 @@ bool CmdlineArgs::parse(const QStringList& arguments) {
             m_settingsPath.append("/");
         }
         m_settingsPathSet = true;
+    }
+
+    if (parser.isSet(engineCpuId)) {
+        bool ok = false;
+        quint32 engineCpu = parser.value(engineCpuId).toUInt(&ok);
+        if (!ok) {
+            qWarning() << "engine-cpu-id is not a valid number";
+        } else {
+            m_engineCpuId = static_cast<qint64>(engineCpu);
+        }
+    }
+
+    if (parser.isSet(engineCpuSet)) {
+        m_engineCpuSet = parser.value(engineCpuSet);
     }
 
     if (parser.isSet(resourcePath)) {
