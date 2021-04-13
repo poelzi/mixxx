@@ -10,6 +10,7 @@
 #include "library/dao/trackschema.h"
 #include "library/library.h"
 #include "library/librarytablemodel.h"
+#include "library/searchqueryparser.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "mixer/playermanager.h"
@@ -28,6 +29,7 @@
 namespace {
 
 const ConfigKey kConfigKeyAllowTrackLoadToPlayingDeck("[Controls]", "AllowTrackLoadToPlayingDeck");
+const ConfigKey kConfigKeySaveLibraryState("[Library]", "SaveModelState");
 // Default color for the focus border of TableItemDelegates
 const QColor kDefaultFocusBorderColor = Qt::white;
 } // namespace
@@ -38,9 +40,7 @@ WTrackTableView::WTrackTableView(QWidget* parent,
         double backgroundColorOpacity,
         bool sorting)
         : WLibraryTableView(parent,
-                  pConfig,
-                  ConfigKey(LIBRARY_CONFIGVALUE,
-                          WTRACKTABLEVIEW_VSCROLLBARPOS_KEY)),
+                  pConfig),
           m_pConfig(pConfig),
           m_pLibrary(pLibrary),
           m_backgroundColorOpacity(backgroundColorOpacity),
@@ -73,6 +73,10 @@ WTrackTableView::WTrackTableView(QWidget* parent,
             &QShortcut::activated,
             this,
             QOverload<>::of(&WTrackTableView::setFocus));
+    connect(this,
+            &WTrackTableView::scrollToCurrent,
+            this,
+            &WTrackTableView::slotScrollToCurrent);
 }
 
 WTrackTableView::~WTrackTableView() {
@@ -139,7 +143,7 @@ void WTrackTableView::slotGuiTick50ms(double /*unused*/) {
 }
 
 // slot
-void WTrackTableView::loadTrackModel(QAbstractItemModel* model) {
+void WTrackTableView::loadTrackModel(QAbstractItemModel* model, bool restoreState) {
     qDebug() << "WTrackTableView::loadTrackModel()" << model;
 
     TrackModel* trackModel = dynamic_cast<TrackModel*>(model);
@@ -151,8 +155,6 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* model) {
         return;
     }
 
-    TrackModel* newModel = nullptr;
-
     /* If the model has not changed
      * there's no need to exchange the headers
      * this will cause a small GUI freeze
@@ -162,12 +164,10 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* model) {
         // a select() if the table is dirty.
         doSortByColumn(horizontalHeader()->sortIndicatorSection(),
                 horizontalHeader()->sortIndicatorOrder());
+        if (restoreState) {
+            restoreCurrentViewState();
+        }
         return;
-    } else {
-        newModel = trackModel;
-        saveVScrollBarPos(getTrackModel());
-        //saving current vertical bar position
-        //using address of track model as key
     }
 
     setVisible(false);
@@ -309,9 +309,10 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* model) {
 
     setVisible(true);
 
-    restoreVScrollBarPos(newModel);
-    // restoring scrollBar position using model pointer as key
-    // scrollbar positions with respect to different models are backed by map
+    // trigger restoring scrollBar position, selection etc
+    if (restoreState) {
+        restoreCurrentViewState();
+    }
     initTrackMenu();
 }
 
@@ -458,14 +459,36 @@ void WTrackTableView::contextMenuEvent(QContextMenuEvent* event) {
 void WTrackTableView::onSearch(const QString& text) {
     TrackModel* trackModel = getTrackModel();
     if (trackModel) {
-        bool searchWasEmpty = false;
-        if (trackModel->currentSearch().isEmpty()) {
-            saveNoSearchVScrollBarPos();
-            searchWasEmpty = true;
-        }
+        saveCurrentViewState();
+        bool isLessSpecific = SearchQueryParser::isReducedTerm(trackModel->currentSearch(), text);
+        QList<TrackId> selectedTracks = getSelectedTrackIds();
+        TrackId currentTrack = getCurrentTrackId();
         trackModel->search(text);
-        if (!searchWasEmpty && text.isEmpty()) {
-            restoreNoSearchVScrollBarPos();
+
+        if (isLessSpecific && currentTrack.isValid()) {
+            // if the user removed query terms, we try to select the same
+            // tracks as before
+            if (!setCurrentTrackId(currentTrack)) {
+                // we could not find the requested track in the current view
+                // try to restore a saved state
+                restoreCurrentViewState(true);
+            }
+            if (!selectedTracks.isEmpty()) {
+                setSelectedTracks(selectedTracks);
+            }
+        } else {
+            // the user created a more specific search query, try to restore a
+            // previous state
+            if (!restoreCurrentViewState(true)) {
+                // we found no saved state for this query, try to select the
+                // last active track, if they are part of the result set
+                if (currentTrack.isValid()) {
+                    setCurrentTrackId(currentTrack);
+                }
+                if (!selectedTracks.isEmpty()) {
+                    setSelectedTracks(selectedTracks);
+                }
+            }
         }
     }
 }
@@ -814,6 +837,26 @@ QList<TrackId> WTrackTableView::getSelectedTrackIds() const {
     return trackIds;
 }
 
+TrackId WTrackTableView::getCurrentTrackId() const {
+    QItemSelectionModel* pSelectionModel = selectionModel();
+    VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
+        qWarning() << "No selected tracks available";
+        return TrackId();
+    }
+
+    TrackModel* pTrackModel = getTrackModel();
+    VERIFY_OR_DEBUG_ASSERT(pTrackModel != nullptr) {
+        qWarning() << "No selected tracks available";
+        return TrackId();
+    }
+
+    const QModelIndex current = selectionModel()->currentIndex();
+    if (current.isValid()) {
+        return pTrackModel->getTrackId(current);
+    }
+    return TrackId();
+}
+
 void WTrackTableView::setSelectedTracks(const QList<TrackId>& trackIds) {
     QItemSelectionModel* pSelectionModel = selectionModel();
     VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
@@ -834,6 +877,46 @@ void WTrackTableView::setSelectedTracks(const QList<TrackId>& trackIds) {
             pSelectionModel->select(model()->index(trackRow, 0),
                     QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
+    }
+}
+
+bool WTrackTableView::setCurrentTrackId(const TrackId& trackId) {
+    QItemSelectionModel* pSelectionModel = selectionModel();
+    VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
+        qWarning() << "No selected tracks available";
+        return false;
+    }
+
+    TrackModel* pTrackModel = getTrackModel();
+    VERIFY_OR_DEBUG_ASSERT(pTrackModel != nullptr) {
+        qWarning() << "No selected tracks available";
+        return false;
+    }
+    const QVector<int> gts = pTrackModel->getTrackRows(trackId);
+    if (gts.empty()) {
+        return false;
+    }
+
+    const QModelIndex idx = model()->index(gts[0], 0);
+    pSelectionModel->setCurrentIndex(idx,
+            QItemSelectionModel::SelectCurrent | QItemSelectionModel::Select);
+    selectRow(idx.row());
+    // we need to emit the scrollTo event after the current loop finishes
+    // otherwise some early check in scrollTo will fail and no scroll happens
+    emit scrollToCurrent();
+
+    return true;
+}
+
+void WTrackTableView::slotScrollToCurrent() {
+    QItemSelectionModel* pSelectionModel = selectionModel();
+    VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
+        qWarning() << "No selected tracks available";
+        return;
+    }
+    QModelIndex current = pSelectionModel->currentIndex();
+    if (current.isValid()) {
+        scrollTo(current);
     }
 }
 
@@ -1009,14 +1092,54 @@ bool WTrackTableView::hasFocus() const {
     return QWidget::hasFocus();
 }
 
-void WTrackTableView::saveCurrentVScrollBarPos() {
-    saveVScrollBarPos(getTrackModel());
-}
-
-void WTrackTableView::restoreCurrentVScrollBarPos() {
-    restoreVScrollBarPos(getTrackModel());
+QString WTrackTableView::getStateKey() const {
+    TrackModel* rv = getTrackModel();
+    if (rv) {
+        return rv->modelKey();
+    }
+    return QString();
 }
 
 void WTrackTableView::keyNotationChanged() {
     QWidget::update();
+}
+
+void WTrackTableView::fillModelState(ModelState& state) {
+    auto selection = selectionModel();
+    state.selectionIndex = QModelIndexList();
+    if (!selection->selectedIndexes().isEmpty()) {
+        state.selectionTracks = getSelectedTrackIds();
+    } else {
+        state.selectionTracks.clear();
+    }
+    if (selection->currentIndex().isValid()) {
+        state.currentIndex = selection->currentIndex();
+        state.currentTrack = getCurrentTrackId();
+    } else {
+        state.currentIndex = QModelIndex();
+        state.currentTrack = TrackId();
+    }
+}
+
+bool WTrackTableView::applyModelState(ModelState& state) {
+    auto selection = selectionModel();
+    selection->clearSelection();
+    if (!state.selectionTracks.isEmpty()) {
+        setSelectedTracks(state.selectionTracks);
+    }
+    if (state.currentTrack.isValid()) {
+        if (setCurrentTrackId(state.currentTrack)) {
+            // we found the track that was saved
+            qDebug() << "found and selected track";
+            return true;
+        }
+        qDebug() << "track not found";
+    }
+    if (state.currentIndex.isValid()) {
+        selection->setCurrentIndex(state.currentIndex,
+                QItemSelectionModel::SelectCurrent |
+                        QItemSelectionModel::Select);
+        return true;
+    }
+    return false;
 }

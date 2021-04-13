@@ -77,6 +77,19 @@ class BrowseTableModel final : public QStandardItemModel, public virtual TrackMo
     bool isColumnSortable(int column) const override;
     TrackModel::SortColumnId sortColumnIdFromColumnIndex(int index) const override;
     int columnIndexFromSortColumnId(TrackModel::SortColumnId sortColumn) const override;
+    QString modelKey(bool noSearch = false) const override {
+        if (noSearch) {
+            return QStringLiteral("browse/") +
+                    m_pBrowseThread->getPath().info().locationPath();
+        } else {
+            return QStringLiteral("browse/") +
+                    m_pBrowseThread->getPath().info().locationPath() +
+                    QStringLiteral("#") +
+                    currentSearch();
+        }
+    }
+  signals:
+    void restoreModelState();
 
   public slots:
     void slotClear(BrowseTableModel*);
