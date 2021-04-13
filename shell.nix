@@ -345,6 +345,7 @@ in stdenv.mkDerivation rec {
     ffmpeg
     fftw
     flac
+    grantlee5
     git
     glib
     hidapi
