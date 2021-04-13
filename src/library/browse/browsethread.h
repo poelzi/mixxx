@@ -33,6 +33,9 @@ class BrowseThread : public QThread {
     void executePopulation(mixxx::FileAccess path, BrowseTableModel* client);
     void run();
     static BrowseThreadPointer getInstanceRef();
+    mixxx::FileAccess getPath() {
+        return mixxx::FileAccess(m_path);
+    };
 
   signals:
     void rowsAppended(const QList< QList<QStandardItem*> >&, BrowseTableModel*);

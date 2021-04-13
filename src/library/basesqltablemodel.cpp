@@ -194,6 +194,7 @@ void BaseSqlTableModel::select() {
     if (!m_bInitialized) {
         return;
     }
+    beginResetModel();
     // We should be able to detect when a select() would be a no-op. The DAO's
     // do not currently broadcast signals for when common things happen. In the
     // future, we can turn this check on and avoid a lot of needless
@@ -332,7 +333,7 @@ void BaseSqlTableModel::select() {
             std::move(trackIdToRows));
     // Both rowInfo and trackIdToRows (might) have been moved and
     // must not be used afterwards!
-
+    endResetModel();
     qDebug() << this << "select() took" << time.elapsed().debugMillisWithUnit()
              << m_rowInfo.size();
 }

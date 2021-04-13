@@ -1,7 +1,10 @@
 #pragma once
 
+#include <QStringBuilder>
+
 #include "library/basesqltablemodel.h"
 #include "library/trackset/tracksettablemodel.h"
+#include "util/string.h"
 
 class PlaylistTableModel final : public TrackSetTableModel {
     Q_OBJECT
@@ -27,8 +30,17 @@ class PlaylistTableModel final : public TrackSetTableModel {
     /// Returns the number of successful additions.
     int addTracks(const QModelIndex& index, const QList<QString>& locations) final;
     bool isLocked() final;
-
     Capabilities getCapabilities() const final;
+    virtual QString modelKey(bool noSearch = false) const override {
+        if (noSearch) {
+            return QStringLiteral("playlist/") +
+                    QString::number(m_iPlaylistId);
+        }
+        return QStringLiteral("playlist/") +
+                QString::number(m_iPlaylistId) +
+                QStringLiteral("#") +
+                currentSearch();
+    }
 
   private slots:
     void playlistsChanged(const QSet<int>& playlistIds);

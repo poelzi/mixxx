@@ -177,6 +177,7 @@ void BasePlaylistFeature::activateChild(const QModelIndex& index) {
     if (playlistId == kInvalidPlaylistId) {
         return;
     }
+    emit saveModelState();
 
     m_pPlaylistTableModel->setTableModel(playlistId);
     emit showTrackModel(m_pPlaylistTableModel);
@@ -199,6 +200,7 @@ void BasePlaylistFeature::activatePlaylist(int playlistId) {
     if (!index.isValid()) {
         return;
     }
+    emit saveModelState();
 
     m_lastRightClickedIndex = index;
     m_pPlaylistTableModel->setTableModel(playlistId);
@@ -501,6 +503,7 @@ void BasePlaylistFeature::slotCreateImportPlaylist() {
 
         lastPlaylistId = m_playlistDao.createPlaylist(name);
         if (lastPlaylistId != kInvalidPlaylistId) {
+            emit saveModelState();
             m_pPlaylistTableModel->setTableModel(lastPlaylistId);
         } else {
             QMessageBox::warning(nullptr,
@@ -559,6 +562,7 @@ void BasePlaylistFeature::slotExportPlaylist() {
             new PlaylistTableModel(this,
                     m_pLibrary->trackCollections(),
                     "mixxx.db.model.playlist_export"));
+    emit saveModelState();
 
     pPlaylistTableModel->setTableModel(m_pPlaylistTableModel->getPlaylist());
     pPlaylistTableModel->setSort(
@@ -602,6 +606,7 @@ void BasePlaylistFeature::slotExportTrackFiles() {
                     m_pLibrary->trackCollections(),
                     "mixxx.db.model.playlist_export"));
 
+    emit saveModelState();
     pPlaylistTableModel->setTableModel(m_pPlaylistTableModel->getPlaylist());
     pPlaylistTableModel->setSort(pPlaylistTableModel->fieldIndex(
                                          ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION),
