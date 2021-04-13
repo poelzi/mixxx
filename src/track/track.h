@@ -369,6 +369,7 @@ class Track : public QObject {
     void waveformSummaryUpdated();
     void coverArtUpdated();
     void bpmUpdated(double bpm);
+    void bpmLockUpdated(bool locked);
     void beatsUpdated();
     void keyUpdated(double key);
     void keysUpdated();

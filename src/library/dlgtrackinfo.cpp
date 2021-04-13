@@ -32,6 +32,8 @@ constexpr int kMinBpm = 30;
 const mixxx::Duration kMaxInterval = mixxx::Duration::fromMillis(
         static_cast<qint64>(1000.0 * (60.0 / kMinBpm)));
 
+int DlgTrackInfo::s_lastTabOpened = 0;
+
 DlgTrackInfo::DlgTrackInfo(
         const TrackModel* trackModel)
         // No parent because otherwise it inherits the style parent's
@@ -63,6 +65,7 @@ void DlgTrackInfo::init() {
     starsLayout->insertWidget(0, m_pWStarRating.get());
     // This is necessary to pass on mouseMove events to WStarRating
     m_pWStarRating->setMouseTracking(true);
+    tabWidget->setCurrentIndex(DlgTrackInfo::s_lastTabOpened);
 
     if (m_pTrackModel) {
         connect(btnNext,
@@ -93,6 +96,13 @@ void DlgTrackInfo::init() {
             this,
             &DlgTrackInfo::slotCancel);
 
+    connect(btnRevert,
+            &QPushButton::clicked,
+            this,
+            [this]() {
+                populateFields(*m_pLoadedTrack);
+            });
+
     connect(bpmDouble,
             &QPushButton::clicked,
             this,
@@ -121,11 +131,19 @@ void DlgTrackInfo::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfo::slotBpmClear);
+    connect(bpmRound,
+            &QPushButton::clicked,
+            this,
+            &DlgTrackInfo::slotBpmRound);
 
     connect(bpmConst,
             &QCheckBox::stateChanged,
             this,
             &DlgTrackInfo::slotBpmConstChanged);
+    connect(beatgridLock,
+            &QCheckBox::stateChanged,
+            this,
+            [this](int state) { enableBpmControls(state == Qt::Unchecked); });
 
     connect(spinBpm,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -160,6 +178,13 @@ void DlgTrackInfo::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfo::slotOpenInFileBrowser);
+
+    connect(tabWidget,
+            &QTabWidget::currentChanged,
+            [this](int index) {
+                Q_UNUSED(this);
+                DlgTrackInfo::s_lastTabOpened = index;
+            });
 
     CoverArtCache* pCache = CoverArtCache::instance();
     if (pCache) {
@@ -279,15 +304,31 @@ void DlgTrackInfo::reloadTrackBeats(const Track& track) {
     m_trackHasBeatMap = m_pBeatsClone &&
             !(m_pBeatsClone->getCapabilities() & mixxx::Beats::BEATSCAP_SETBPM);
     bpmConst->setChecked(!m_trackHasBeatMap);
-    bpmConst->setEnabled(m_trackHasBeatMap); // We cannot make turn a BeatGrid to a BeatMap
-    spinBpm->setEnabled(!m_trackHasBeatMap); // We cannot change bpm continuously or tab them
-    bpmTap->setEnabled(!m_trackHasBeatMap);  // when we have a beatmap
+    bpmConst->setEnabled(m_trackHasBeatMap);
 
-    if (track.isBpmLocked()) {
-        tabBPM->setEnabled(false);
-    } else {
-        tabBPM->setEnabled(true);
+    m_beatsChanged = false;
+    beatgridLock->setChecked(track.isBpmLocked());
+}
+
+void DlgTrackInfo::enableBpmControls(bool enabled) {
+    bool canSetBpm = false;
+    if (m_pLoadedTrack) {
+        mixxx::BeatsPointer pBeats = m_pLoadedTrack->getBeats();
+        if (pBeats) {
+            canSetBpm = pBeats->getCapabilities() & mixxx::Beats::BEATSCAP_SETBPM;
+        }
     }
+    spinBpm->setEnabled(enabled && canSetBpm);
+    bpmRound->setEnabled(enabled && canSetBpm);
+    bpmConst->setEnabled(enabled && !canSetBpm);
+    bpmTap->setEnabled(enabled && canSetBpm);
+    bpmDouble->setEnabled(enabled);
+    bpmHalve->setEnabled(enabled);
+    bpmTwoThirds->setEnabled(enabled);
+    bpmThreeFourth->setEnabled(enabled);
+    bpmThreeHalves->setEnabled(enabled);
+    bpmFourThirds->setEnabled(enabled);
+    bpmClear->setEnabled(enabled);
 }
 
 void DlgTrackInfo::loadTrackInternal(const TrackPointer& pTrack) {
@@ -397,8 +438,12 @@ void DlgTrackInfo::saveTrack() {
     m_pLoadedTrack->setTrackNumber(txtTrackNumber->text());
     m_pLoadedTrack->setComment(txtComment->toPlainText());
 
-    m_pLoadedTrack->trySetBeats(m_pBeatsClone);
-    reloadTrackBeats(*m_pLoadedTrack);
+    m_pLoadedTrack->setBpmLocked(beatgridLock->checkState() == Qt::Checked);
+
+    if (m_beatsChanged) {
+        m_pLoadedTrack->trySetBeats(m_pBeatsClone);
+        reloadTrackBeats(*m_pLoadedTrack);
+    }
 
     // If the user is editing the key and hits enter to close DlgTrackInfo, the
     // editingFinished signal will not fire in time. Run the key text changed
@@ -461,48 +506,86 @@ void DlgTrackInfo::clear() {
 
     m_loadedCoverInfo = CoverInfo();
     m_pWCoverArtLabel->setCoverArt(m_loadedCoverInfo, QPixmap());
+    m_beatsChanged = false;
+}
+
+void DlgTrackInfo::slotBpmRound() {
+    if (!m_pBeatsClone) {
+        return;
+    }
+    if (m_pBeatsClone->getCapabilities() & mixxx::Beats::BEATSCAP_SETBPM) {
+        m_pBeatsClone = m_pBeatsClone->setBpm(
+                ::round(m_pBeatsClone->getBpm()));
+        spinBpm->setValue(m_pBeatsClone->getBpm());
+    }
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmDouble() {
+    if (!m_pBeatsClone) {
+        return;
+    }
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::DOUBLE);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmHalve() {
+    if (!m_pBeatsClone) {
+        return;
+    }
+    m_pBeatsClone->scale(mixxx::Beats::HALVE);
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::HALVE);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmTwoThirds() {
+    if (!m_pBeatsClone) {
+        return;
+    }
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::TWOTHIRDS);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmThreeFourth() {
+    if (!m_pBeatsClone) {
+        return;
+    }
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::THREEFOURTHS);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmFourThirds() {
+    if (!m_pBeatsClone) {
+        return;
+    }
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::FOURTHIRDS);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmThreeHalves() {
+    if (!m_pBeatsClone) {
+        return;
+    }
     m_pBeatsClone = m_pBeatsClone->scale(mixxx::Beats::THREEHALVES);
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmClear() {
@@ -513,6 +596,7 @@ void DlgTrackInfo::slotBpmClear() {
     bpmConst->setEnabled(m_trackHasBeatMap);
     spinBpm->setEnabled(true);
     bpmTap->setEnabled(true);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmConstChanged(int state) {
@@ -533,10 +617,12 @@ void DlgTrackInfo::slotBpmConstChanged(int state) {
         }
         spinBpm->setEnabled(true);
         bpmTap->setEnabled(true);
+        bpmRound->setEnabled(true);
     } else {
         // try to reload BeatMap from the Track
         reloadTrackBeats(*m_pLoadedTrack);
     }
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotBpmTap(double averageLength, int numSamples) {
@@ -550,11 +636,13 @@ void DlgTrackInfo::slotBpmTap(double averageLength, int numSamples) {
         m_dLastTapedBpm = averageBpm;
         spinBpm->setValue(averageBpm);
     }
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotSpinBpmValueChanged(double value) {
     if (value <= 0) {
         m_pBeatsClone.clear();
+        m_beatsChanged = true;
         return;
     }
 
@@ -576,6 +664,7 @@ void DlgTrackInfo::slotSpinBpmValueChanged(double value) {
     // read back the actual value
     double newValue = m_pBeatsClone->getBpm();
     spinBpm->setValue(newValue);
+    m_beatsChanged = true;
 }
 
 void DlgTrackInfo::slotKeyTextChanged() {

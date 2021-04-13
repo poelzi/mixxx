@@ -58,6 +58,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     void slotBpmFourThirds();
     void slotBpmThreeHalves();
     void slotBpmClear();
+    void slotBpmRound();
     void slotBpmConstChanged(int state);
     void slotBpmTap(double averageLength, int numSamples);
     void slotSpinBpmValueChanged(double value);
@@ -85,6 +86,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     void loadTrackInternal(const TrackPointer& pTrack);
     void populateFields(const Track& track);
     void reloadTrackBeats(const Track& track);
+    void enableBpmControls(bool enabled);
     void saveTrack();
     void unloadTrack(bool save);
     void clear();
@@ -99,6 +101,7 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     mixxx::BeatsPointer m_pBeatsClone;
     Keys m_keysClone;
     bool m_trackHasBeatMap;
+    bool m_beatsChanged;
 
     TapFilter m_tapFilter;
     double m_dLastTapedBpm;
@@ -109,4 +112,6 @@ class DlgTrackInfo : public QDialog, public Ui::DlgTrackInfo {
     parented_ptr<WStarRating> m_pWStarRating;
 
     std::unique_ptr<DlgTagFetcher> m_pDlgTagFetcher;
+    // Saves the last last tab used so new windows start at that one
+    static int s_lastTabOpened;
 };

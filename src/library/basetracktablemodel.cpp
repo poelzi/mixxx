@@ -14,6 +14,7 @@
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_basetracktablemodel.cpp"
+#include "track/bpm.h"
 #include "track/track.h"
 #include "util/assert.h"
 #include "util/compatibility.h"
@@ -662,7 +663,7 @@ QVariant BaseTrackTableModel::roleValue(
                 if (role == Qt::ToolTipRole || role == kDataExportRole) {
                     return QString::number(bpm.getValue(), 'f', 4);
                 } else {
-                    return QString::number(bpm.getValue(), 'f', 1);
+                    return bpm.displayString();
                 }
             } else {
                 return QChar('-');

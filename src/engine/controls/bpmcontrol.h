@@ -82,6 +82,7 @@ class BpmControl : public EngineControl {
     void notifySeek(double dNewPlaypos) override;
     void trackLoaded(TrackPointer pNewTrack) override;
     void trackBeatsUpdated(mixxx::BeatsPointer pBeats) override;
+    void trackUnloaded(TrackPointer pOldTrack) override;
 
   private slots:
     void slotAdjustBeatsFaster(double);
@@ -93,6 +94,7 @@ class BpmControl : public EngineControl {
     void slotControlBeatSyncTempo(double);
     void slotTapFilter(double,int);
     void slotBpmTap(double);
+    void slotBeatgridLock(double);
     void slotUpdateRateSlider(double v = 0.0);
     void slotUpdateEngineBpm(double v = 0.0);
     void slotBeatsTranslate(double);
@@ -132,6 +134,7 @@ class BpmControl : public EngineControl {
     ControlPushButton* m_pAdjustBeatsSlower;
     ControlPushButton* m_pTranslateBeatsEarlier;
     ControlPushButton* m_pTranslateBeatsLater;
+    ControlPushButton* m_pLockBeatgrid;
 
     // The current effective BPM of the engine
     ControlLinPotmeter* m_pEngineBpm;
